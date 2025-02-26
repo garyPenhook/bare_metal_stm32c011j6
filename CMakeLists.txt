@@ -11,12 +11,14 @@ set(MCU_FAMILY STM32C0xx)
 set(MCU_MODEL STM32C011xx)
 set(CPU_PARAMETERS "-mcpu=cortex-m0plus -mthumb -mfloat-abi=soft")
 
-# Set compiler flags
-set(CMAKE_C_FLAGS "${CPU_PARAMETERS} -Wall -Wextra -Werror -Wno-unused-parameter")
+# Set compiler flags - added -Os for size optimization
+set(CMAKE_C_FLAGS "${CPU_PARAMETERS} -Wall -Wextra -Werror -Wno-unused-parameter -Os")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections")
+# Explicitly specify NOT to use nano.specs
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --specs=nosys.specs")
 
-# Fix linker flags for baremetal - avoid standard startup files and libraries
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections -nostartfiles -nodefaultlibs -nostdlib")
+# Fix linker flags for baremetal - avoid standard startup files but keep libraries
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections -nostartfiles")
 
 # Set build type to Debug by default
 if(NOT CMAKE_BUILD_TYPE)
@@ -39,8 +41,8 @@ add_executable(${PROJECT_NAME}.elf ${SOURCES})
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/cmake/stm32_linker.ld)
 set_target_properties(${PROJECT_NAME}.elf PROPERTIES LINK_FLAGS "-T${LINKER_SCRIPT}")
 
-# Link with minimal required libraries
-target_link_libraries(${PROJECT_NAME}.elf gcc)
+# Link with standard libraries (not nano versions)
+target_link_libraries(${PROJECT_NAME}.elf gcc c nosys m)
 
 # Generate hex and bin files
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD

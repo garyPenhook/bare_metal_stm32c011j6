@@ -3,6 +3,8 @@
 #include "main.h"
 
 // Define ARM Cortex-M intrinsics that might be missing
+// Add at the top of your file if stdint.h isn't working
+
 #ifndef __WFI
 #define __WFI() __asm volatile ("wfi")
 #endif
