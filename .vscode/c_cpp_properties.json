@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "name": "STM32C0",
+            "includePath": [
+                "${workspaceFolder}/include/**",
+                "/usr/include/newlib/c++/**",
+                "/usr/include/newlib/**",
+                "/usr/lib/arm-none-eabi/include/**"
+            ],
+            "defines": [
+                "STM32C011xx",
+                "USE_FULL_LL_DRIVER"
+            ],
+            "compilerPath": "/usr/bin/arm-none-eabi-gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-arm"
+        }
+    ],
+    "version": 4
+}
