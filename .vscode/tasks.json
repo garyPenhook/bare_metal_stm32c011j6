@@ -1,0 +1,48 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Configure CMake",
+            "type": "shell",
+            "command": "mkdir -p build && cd build && cmake ..",
+            "group": "build"
+        },
+        {
+            "label": "Build",
+            "type": "shell",
+            "command": "cd build && make -j4",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "dependsOn": [
+                "Configure CMake"
+            ],
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Clean",
+            "type": "shell",
+            "command": "rm -rf build",
+            "group": "build"
+        },
+        {
+            "label": "Flash with ST-Link",
+            "type": "shell",
+            "command": "st-flash write build/stm32_project.bin 0x08000000",
+            "group": "build",
+            "dependsOn": [
+                "Build"
+            ]
+        },
+        {
+            "label": "Flash with OpenOCD",
+            "type": "shell",
+            "command": "openocd -f interface/stlink.cfg -f target/stm32c0x.cfg -c 'program build/stm32_project.elf verify reset exit'",
+            "group": "build",
+            "dependsOn": [
+                "Build"
+            ]
+        }
+    ]
+}
