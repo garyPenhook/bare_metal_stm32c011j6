@@ -2,7 +2,7 @@
 #include "stm32_peripherals.h"
 
 /**
-  * @brief  Initialize GPIO pins - Configure pin A5 (LED) as output
+  * @brief  Initialize GPIO pins - Configure pin PA13 (LED) as output
   * @retval None
   */
 void GPIO_Init(void)
@@ -10,15 +10,15 @@ void GPIO_Init(void)
     // Enable GPIOA clock
     RCC->IOPENR |= RCC_IOPENR_GPIOAEN;
     
-    // Configure PA5 as output (assuming it connects to an LED)
-    // Use efficient bit operations: clear and set in one step
-    GPIOA->MODER = (GPIOA->MODER & ~GPIO_MODER_MODE5) | GPIO_MODER_MODE5_0;
+    // Configure PA13 as output (assuming it connects to an LED)
+    // Use direct bit manipulation since GPIO_MODER_MODE13 is not defined
+    GPIOA->MODER = (GPIOA->MODER & ~(0x3 << (13 * 2))) | (0x1 << (13 * 2));
     
     // Set output to push-pull mode for faster switching
-    GPIOA->OTYPER &= ~(GPIO_OTYPER_OT5);
+    GPIOA->OTYPER &= ~(1 << 13);
     
     // Configure for high speed operation
-    GPIOA->OSPEEDR |= (GPIO_OSPEEDR_OSPEED5);
+    GPIOA->OSPEEDR |= (0x3 << (13 * 2));
 }
 
 /**
