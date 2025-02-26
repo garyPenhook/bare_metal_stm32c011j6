@@ -68,3 +68,4 @@ arm-none-eabi-gdb build/stm32_project.elf
 For this example, connect:
 - An LED with a suitable resistor to pin PA5
 - ST-Link programmer to the appropriate pins (SWDIO, SWCLK, GND, VDD)
+## Updated on Wed 26 Feb 2025 12:33:55 AM EST
