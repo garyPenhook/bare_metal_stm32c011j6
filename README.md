@@ -50,15 +50,12 @@ The project includes several ways to analyze memory usage:
 3. **Visual Analysis**: Run the "Visual Memory Analysis" task to see a graphical representation
 
 ### Memory Analysis Output Example
-
-```
 =======================================================
 Memory Usage for stm32_project.elf
 =======================================================
 Flash: 2468 / 32768 bytes (7.53%)
 RAM:   108 / 6144 bytes (1.76%)
 =======================================================
-```
 
 ## Flashing
 
