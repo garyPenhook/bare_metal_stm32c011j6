@@ -1,16 +1,18 @@
+#ifndef TICK_H
+#define TICK_H
 
+#include <stdint.h>
 
+// System tick counter
+extern volatile uint32_t uwTick;
 
+// Increment system tick counter
+void IncTick(void);
 
+// Get system tick counter
+uint32_t GetTick(void);
 
+// Delay function
+void Delay(uint32_t delay);
 
-
-
-
-
-
-
-
-
-
-#endif /* TICK_H */#endif}#ifdef __cplusplusvoid Tick_Increment(void);// Tick handler function to be called from SysTick_Handler in startup.c#endifextern "C" {#ifdef __cplusplus#define TICK_H#ifndef TICK_H
+#endif /* TICK_H */

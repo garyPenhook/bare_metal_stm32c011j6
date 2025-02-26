@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "stm32c011xx.h"
 #include "main.h"
+#include "../inc/tick.h" // Fix the path to tick.h
 
 // Define ARM Cortex-M intrinsics that might be missing
 // Add at the top of your file if stdint.h isn't working
@@ -66,6 +67,110 @@ typedef struct {
 #define GPIO_MODER_MODE5_0           (1UL << (5 * 2))          // Output mode for pin 5
 #endif
 
+// Add missing timer definitions
+// Timer register base addresses for STM32C011xx
+#ifndef TIM3_BASE
+#define TIM3_BASE               (0x40000400UL)
+#endif
+
+#ifndef TIM3
+#define TIM3                    ((TIM_TypeDef *) TIM3_BASE)
+#endif
+
+// Timer register structure
+#ifndef TIM_TypeDef
+typedef struct {
+  volatile uint32_t CR1;         // Control register 1
+  volatile uint32_t CR2;         // Control register 2
+  volatile uint32_t SMCR;        // Slave mode control register
+  volatile uint32_t DIER;        // DMA/Interrupt enable register
+  volatile uint32_t SR;          // Status register
+  volatile uint32_t EGR;         // Event generation register
+  volatile uint32_t CCMR1;       // Capture/compare mode register 1
+  volatile uint32_t CCMR2;       // Capture/compare mode register 2
+  volatile uint32_t CCER;        // Capture/compare enable register
+  volatile uint32_t CNT;         // Counter
+  volatile uint32_t PSC;         // Prescaler
+  volatile uint32_t ARR;         // Auto-reload register
+  volatile uint32_t RCR;         // Repetition counter register
+  volatile uint32_t CCR1;        // Capture/compare register 1
+  volatile uint32_t CCR2;        // Capture/compare register 2
+  volatile uint32_t CCR3;        // Capture/compare register 3
+  volatile uint32_t CCR4;        // Capture/compare register 4
+  volatile uint32_t BDTR;        // Break and dead-time register
+  volatile uint32_t DCR;         // DMA control register
+  volatile uint32_t DMAR;        // DMA address for full transfer
+  volatile uint32_t OR;          // Option register
+} TIM_TypeDef;
+#endif
+
+// Timer register bit definitions
+#ifndef TIM_CR1_CEN
+#define TIM_CR1_CEN             (1UL << 0)        // Counter enable
+#endif
+
+#ifndef TIM_DIER_UIE
+#define TIM_DIER_UIE            (1UL << 0)        // Update interrupt enable
+#endif
+
+#ifndef TIM_SR_UIF
+#define TIM_SR_UIF              (1UL << 0)        // Update interrupt flag
+#endif
+
+// RCC register definitions for STM32C011xx
+#ifndef RCC_APBENR1_TIM3EN
+#define RCC_APBENR1_TIM3EN      (1UL << 1)        // TIM3 clock enable
+#endif
+
+// NVIC definitions
+#ifndef TIM3_IRQn
+#define TIM3_IRQn               16                // TIM3 interrupt number
+#endif
+
+// Define NVIC structure if it's not already defined
+#ifndef NVIC_BASE
+#define NVIC_BASE               (0xE000E100UL)    // NVIC Base Address
+#endif
+
+// Define the NVIC_Type structure
+typedef struct {
+  volatile uint32_t ISER[8];     // Interrupt Set Enable Register
+  uint32_t RESERVED0[24];
+  volatile uint32_t ICER[8];     // Interrupt Clear Enable Register
+  uint32_t RESERVED1[24];
+  volatile uint32_t ISPR[8];     // Interrupt Set Pending Register
+  uint32_t RESERVED2[24];
+  volatile uint32_t ICPR[8];     // Interrupt Clear Pending Register
+  uint32_t RESERVED3[24];
+  volatile uint32_t IABR[8];     // Interrupt Active bit Register
+  uint32_t RESERVED4[56];
+  volatile uint8_t IP[240];      // Interrupt Priority Register (8Bit wide)
+  uint32_t RESERVED5[644];
+  volatile uint32_t STIR;        // Software Trigger Interrupt Register
+} NVIC_Type;
+
+#ifndef NVIC
+#define NVIC                    ((NVIC_Type *) NVIC_BASE)
+#endif
+
+// NVIC functions
+static inline void NVIC_SetPriority(int32_t IRQn, uint32_t priority)
+{
+  if(IRQn >= 0) {
+    NVIC->IP[IRQn] = (uint8_t)((priority << 4) & 0xff);
+  }
+}
+
+static inline void NVIC_EnableIRQ(int32_t IRQn)
+{
+  if(IRQn >= 0) {
+    NVIC->ISER[0] = (1UL << ((uint32_t)IRQn & 0x1F));
+  }
+}
+
+// Global variables
+volatile uint32_t uwTick = 0;
+
 // System Clock Configuration - Set up HSI at 48MHz
 void SystemClock_Config(void)
 {
@@ -105,17 +210,13 @@ void GPIO_Init(void)
     GPIOA->OSPEEDR |= (GPIO_OSPEEDR_OSPEED5);
 }
 
-// SysTick-based delay function - much more efficient than busy waiting
+// Custom tick handler function that will be called from elsewhere
 static volatile uint32_t ms_counter = 0;
 
-// Custom tick handler function that will be called from elsewhere
 void Tick_Increment(void)
 {
     ms_counter++;
 }
-
-// We don't define SysTick_Handler here since it's in startup.c
-// Instead we can add a hook to be called from the ISR
 
 void DelayMs(uint32_t ms)
 {
@@ -126,6 +227,12 @@ void DelayMs(uint32_t ms)
 // System Initialization
 void SystemInit(void)
 {
+    // Enable GPIOA clock
+    RCC->IOPENR |= RCC_IOPENR_GPIOAEN;
+    
+    // Enable TIM3 clock
+    RCC->APBENR1 |= RCC_APBENR1_TIM3EN;
+    
     // Initialize the system clock
     SystemClock_Config();
     
@@ -151,23 +258,111 @@ void Error_Handler(void)
     }
 }
 
+/**
+  * @brief  GPIO Initialization Function
+  * @retval None
+  */
+void InitGPIO(void)
+{
+    // Configure LED pin as output push-pull, no pull-up, no pull-down
+    LED_PORT->MODER &= ~(0x3 << (LED_PIN * 2));  // Clear mode bits
+    LED_PORT->MODER |= (0x1 << (LED_PIN * 2));   // Set output mode
+    
+    LED_PORT->OTYPER &= ~(1 << LED_PIN);         // Push-pull mode
+    LED_PORT->OSPEEDR &= ~(0x3 << (LED_PIN * 2)); // Low speed
+    LED_PORT->PUPDR &= ~(0x3 << (LED_PIN * 2));  // No pull-up, no pull-down
+}
+
+/**
+  * @brief  Timer Configuration for periodic interrupt
+  * @retval None
+  */
+void InitTimer(void)
+{
+    // Configure TIM3 for 500ms interrupts
+    TIM3->PSC = TIMER_PRESCALER;  // Prescaler
+    TIM3->ARR = TIMER_PERIOD;     // Auto-reload value
+    
+    // Enable update interrupt
+    TIM3->DIER |= TIM_DIER_UIE;
+    
+    // Enable TIM3 interrupt in NVIC
+    NVIC_SetPriority(TIM3_IRQn, 3);
+    NVIC_EnableIRQ(TIM3_IRQn);
+    
+    // Start timer
+    TIM3->CR1 |= TIM_CR1_CEN;
+}
+
+/**
+  * @brief  This function handles TIM3 global interrupt.
+  * @retval None
+  */
+void TIM3_IRQHandler(void)
+{
+    // Check if update interrupt flag is set
+    if (TIM3->SR & TIM_SR_UIF) {
+        // Toggle the LED
+        LED_PORT->ODR ^= (1 << LED_PIN);
+        
+        // Clear update interrupt flag
+        TIM3->SR &= ~TIM_SR_UIF;
+    }
+}
+
+/**
+  * @brief  SysTick handler
+  * @retval None
+  */
+void SysTick_Handler(void)
+{
+    IncTick();
+}
+
+/**
+  * @brief  Increment tick counter
+  * @retval None
+  */
+void IncTick(void)
+{
+    uwTick++;
+}
+
+/**
+  * @brief  Get tick counter
+  * @retval Tick counter value
+  */
+uint32_t GetTick(void)
+{
+    return uwTick;
+}
+
+/**
+  * @brief  Delay function
+  * @param  delay: delay in milliseconds
+  * @retval None
+  */
+void Delay(uint32_t delay)
+{
+    uint32_t tickstart = GetTick();
+    while((GetTick() - tickstart) < delay);
+}
+
 // Main function - Simple LED blink with optimized delay
 int main(void)
 {
-    // System is already initialized from startup.c before main
+    // Initialize system
+    SystemInit();
     
-    // Main loop - toggle LED (PA5) every delay interval
+    // Initialize GPIO
+    InitGPIO();
+    
+    // Initialize timer for LED toggling
+    InitTimer();
+    
+    // Main loop
     while (1) {
-        // Toggle LED using direct register access (more efficient)
-        GPIOA->ODR ^= GPIO_ODR_OD5;
-        
-        // Use millisecond-based delay instead of busy-wait
-        DelayMs(500);
-        
-        // Put CPU to sleep while waiting for next SysTick interrupt
-        __WFI();
+        // No need to manually toggle the LED
+        // The timer interrupt will handle it
     }
-    
-    // Never reached
-    return 0;
 }
