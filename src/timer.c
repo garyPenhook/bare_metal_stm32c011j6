@@ -2,7 +2,7 @@
 #include "stm32_peripherals.h"
 
 
-// Only keep timer-related functions
+
 void InitTimer(void)
 {
     // Configure TIM3 for 500ms interrupts
