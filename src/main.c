@@ -1,6 +1,10 @@
 
 
 
+#include <stdint.h>
+#include "stm32c011xx.h"
+#include "main.h"
+#include "stm32c011xx.h"
 #include "main.h"
 
 // System Clock Configuration - Set up HSI at 48MHz
