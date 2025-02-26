@@ -1,3 +1,4 @@
+
 cmake_minimum_required(VERSION 3.20)
 
 # Include custom toolchain file first, before project()
@@ -46,9 +47,72 @@ set_target_properties(${PROJECT_NAME}.elf PROPERTIES LINK_FLAGS "-T${LINKER_SCRI
 # Link with standard libraries (not nano versions)
 target_link_libraries(${PROJECT_NAME}.elf gcc c nosys m)
 
-# Generate hex and bin files
+# Create memory usage script
+file(WRITE ${CMAKE_BINARY_DIR}/memory_usage.sh "#!/bin/bash
+# Parse ELF file size information
+SIZE_OUTPUT=\$(arm-none-eabi-size -A -d \$1)
+
+# Extract text (Flash) and data+bss (RAM) sections
+TEXT_SIZE=\$(echo \"\$SIZE_OUTPUT\" | grep '\\.text' | awk '{print \$2}')
+RODATA_SIZE=\$(echo \"\$SIZE_OUTPUT\" | grep '\\.rodata' | awk '{print \$2}')
+# Some firmware may have an isr_vector section separate from .text
+VECTOR_SIZE=\$(echo \"\$SIZE_OUTPUT\" | grep -E '\\.isr_vector|\\.vector_table' | awk '{print \$2}')
+
+# Data and BSS sections (RAM)
+DATA_SIZE=\$(echo \"\$SIZE_OUTPUT\" | grep '\\.data' | awk '{print \$2}')
+BSS_SIZE=\$(echo \"\$SIZE_OUTPUT\" | grep '\\.bss' | awk '{print \$2}')
+
+# Handle case where some sections might not exist
+TEXT_SIZE=\${TEXT_SIZE:-0}
+RODATA_SIZE=\${RODATA_SIZE:-0}
+VECTOR_SIZE=\${VECTOR_SIZE:-0}
+DATA_SIZE=\${DATA_SIZE:-0}
+BSS_SIZE=\${BSS_SIZE:-0}
+
+# Total Flash and RAM usage
+FLASH_USED=\$((TEXT_SIZE + RODATA_SIZE + VECTOR_SIZE + DATA_SIZE))
+RAM_USED=\$((DATA_SIZE + BSS_SIZE))
+
+# Memory sizes from linker script (in bytes)
+FLASH_SIZE=32768  # 32KB
+RAM_SIZE=6144     # 6KB
+
+# Calculate percentages
+FLASH_PERCENT=\$(echo \"scale=2; \$FLASH_USED * 100 / \$FLASH_SIZE\" | bc)
+RAM_PERCENT=\$(echo \"scale=2; \$RAM_USED * 100 / \$RAM_SIZE\" | bc)
+
+echo \"=======================================================\"
+echo \"Memory Usage for \$1\"
+echo \"=======================================================\"
+echo \"Flash: \$FLASH_USED / \$FLASH_SIZE bytes (\$FLASH_PERCENT%)\"
+echo \"RAM:   \$RAM_USED / \$RAM_SIZE bytes (\$RAM_PERCENT%)\"
+echo \"=======================================================\"
+")
+
+# Make script executable
+execute_process(
+    COMMAND chmod +x ${CMAKE_BINARY_DIR}/memory_usage.sh
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+# Generate hex and bin files, and execute memory usage script
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -O ihex ${PROJECT_NAME}.elf ${PROJECT_NAME}.hex
     COMMAND ${CMAKE_OBJCOPY} -O binary ${PROJECT_NAME}.elf ${PROJECT_NAME}.bin
-    COMMAND arm-none-eabi-size ${PROJECT_NAME}.elf
+    COMMAND bash ${CMAKE_BINARY_DIR}/memory_usage.sh ${PROJECT_NAME}.elf
+)
+
+# Add dedicated memory analysis target
+add_custom_target(memory_analysis
+    COMMAND ${CMAKE_BINARY_DIR}/memory_usage.sh ${PROJECT_NAME}.elf
+    DEPENDS ${PROJECT_NAME}.elf
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Analyzing memory usage..."
+)
+
+# Add a custom command to run after build
+add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
+    COMMAND echo "======= Memory Usage Analysis ======="
+    COMMAND ${CMAKE_BINARY_DIR}/memory_usage.sh ${PROJECT_NAME}.elf
+    COMMAND echo "====================================="
 )

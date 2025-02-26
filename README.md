@@ -8,6 +8,7 @@ A minimalist bare metal implementation for the STM32C011J6M6 microcontroller wit
 - Minimal startup code with vector table
 - Simple LED blinking example
 - CMake-based build system
+- **Memory usage analysis and visualization**
 
 ## Project Structure
 ```
@@ -19,9 +20,15 @@ A minimalist bare metal implementation for the STM32C011J6M6 microcontroller wit
 ├── include/                   # Header files
 │   ├── main.h                 # Main header
 │   └── stm32c011xx.h          # Device header
+├── inc/                       # Additional header files
+│   ├── stm32_peripherals.h    # Peripheral definitions
+│   └── tick.h                 # Timing functions
 ├── src/                       # Source files
 │   ├── main.c                 # Application code
-│   └── startup.c              # Vector table and reset handler
+│   ├── startup.c              # Vector table and reset handler
+│   └── ...                    # Additional source files
+├── tools/                     # Utility scripts
+│   └── memory_usage.py        # Memory usage visualization
 └── stm32_linker.ld            # Linker script (duplicate)
 ```
 
@@ -32,6 +39,25 @@ mkdir -p build
 cd build
 cmake ..
 make
+```
+
+## Memory Usage Analysis
+
+The project includes several ways to analyze memory usage:
+
+1. **Automatic Analysis**: Memory usage is displayed after each build
+2. **VS Code Task**: Run the "Analyze Memory Usage" task to see memory statistics
+3. **Visual Analysis**: Run the "Visual Memory Analysis" task to see a graphical representation
+
+### Memory Analysis Output Example
+
+```
+=======================================================
+Memory Usage for stm32_project.elf
+=======================================================
+Flash: 2468 / 32768 bytes (7.53%)
+RAM:   108 / 6144 bytes (1.76%)
+=======================================================
 ```
 
 ## Flashing
@@ -68,4 +94,3 @@ arm-none-eabi-gdb build/stm32_project.elf
 For this example, connect:
 - An LED with a suitable resistor to pin PA5
 - ST-Link programmer to the appropriate pins (SWDIO, SWCLK, GND, VDD)
-## Updated on Wed 26 Feb 2025 12:33:55 AM EST

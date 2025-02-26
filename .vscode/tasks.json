@@ -43,6 +43,18 @@
             "dependsOn": [
                 "Build"
             ]
+        },
+        {
+            "label": "Memory Analysis",
+            "type": "shell",
+            "command": "cd build && ./memory_usage.sh stm32_project.elf",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build with Memory Analysis",
+            "dependsOrder": "sequence",
+            "dependsOn": ["Build", "Memory Analysis"],
+            "problemMatcher": []
         }
     ]
 }
