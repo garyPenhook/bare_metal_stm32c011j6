@@ -9,6 +9,7 @@ A minimalist bare metal implementation for the STM32C011J6M6 microcontroller wit
 - Simple LED blinking example
 - CMake-based build system
 - **Memory usage analysis and visualization**
+- **48MHz clock configuration using HSI**
 
 ## Project Structure
 ```
@@ -56,6 +57,17 @@ Memory Usage for stm32_project.elf
 Flash: 2468 / 32768 bytes (7.53%)
 RAM:   108 / 6144 bytes (1.76%)
 =======================================================
+
+## System Clock Configuration
+
+The STM32C011J6M6 is configured to run at 48MHz using the internal High-Speed Internal (HSI) oscillator:
+
+- HSI is set as the system clock source
+- HSI is configured with a divider of 1 (HSIDIV=0)
+- No PLL is used in this configuration
+- SystemCoreClock is set to 48MHz
+
+This configuration provides a good balance of performance and power consumption for most applications.
 
 ## Flashing
 

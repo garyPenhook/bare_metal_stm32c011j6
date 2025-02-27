@@ -90,7 +90,8 @@ typedef struct {
 
 // System core clock value (48 MHz for STM32C011)
 #ifndef SystemCoreClock
-#define SystemCoreClock    48000000U
+// Change from #define to extern declaration
+extern uint32_t SystemCoreClock;
 #endif
 
 // NVIC Priority Bits definition for STM32C011
